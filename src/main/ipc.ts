@@ -1,4 +1,5 @@
 import { BrowserWindow, dialog, ipcMain, shell } from "electron";
+import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   ffmpegAvailable,
@@ -210,6 +211,21 @@ export function registerIpcHandlers(): void {
         savePath: args.savePath,
         onProgress: progressSender(windowFor(event), String(args.jobId)),
       });
+    },
+  );
+
+  ipcMain.handle(
+    "file:writeBytes",
+    async (
+      _event,
+      args: { filePath: string; data: Uint8Array },
+    ): Promise<{ ok: true } | { ok: false; error: string }> => {
+      try {
+        await writeFile(String(args?.filePath ?? ""), Buffer.from(args.data));
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, error: (error as Error).message };
+      }
     },
   );
 

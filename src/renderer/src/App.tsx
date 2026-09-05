@@ -3,12 +3,13 @@ import Sidebar, { type RouteId } from "./components/Sidebar";
 import Dashboard from "./pages/Dashboard";
 import YoutubeDownload from "./pages/YoutubeDownload";
 import Converter from "./pages/Converter";
+import PdfEditor from "./pages/PdfEditor";
 import { useToolStatus } from "./hooks/useToolStatus";
 import styles from "./App.module.css";
 
 function routeFromHash(): RouteId {
   const hash = window.location.hash.replace(/^#\/?/, "");
-  if (hash === "youtube-download" || hash === "converter") return hash;
+  if (hash === "youtube-download" || hash === "converter" || hash === "pdf-editor") return hash;
   return "dashboard";
 }
 
@@ -35,6 +36,7 @@ export default function App() {
         {route === "dashboard" && <Dashboard status={status} onNavigate={navigate} />}
         {route === "youtube-download" && <YoutubeDownload status={status} />}
         {route === "converter" && <Converter status={status} />}
+        {route === "pdf-editor" && <PdfEditor />}
       </main>
     </div>
   );

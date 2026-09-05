@@ -1,11 +1,12 @@
 import styles from "./Sidebar.module.css";
 
-export type RouteId = "dashboard" | "youtube-download" | "converter";
+export type RouteId = "dashboard" | "youtube-download" | "converter" | "pdf-editor";
 
 const NAV_ITEMS: Array<{ id: RouteId; label: string }> = [
   { id: "dashboard", label: "Dashboard" },
   { id: "youtube-download", label: "YouTube Download" },
   { id: "converter", label: "Converter" },
+  { id: "pdf-editor", label: "PDF Bearbeiten" },
 ];
 
 type Props = {

@@ -47,6 +47,13 @@ const api = {
   job: {
     cancel: (jobId: string): Promise<boolean> => ipcRenderer.invoke("job:cancel", jobId),
   },
+  file: {
+    writeBytes: (
+      filePath: string,
+      data: Uint8Array,
+    ): Promise<{ ok: true } | { ok: false; error: string }> =>
+      ipcRenderer.invoke("file:writeBytes", { filePath, data }),
+  },
   shell: {
     revealFile: (filePath: string): Promise<void> =>
       ipcRenderer.invoke("shell:revealFile", filePath),

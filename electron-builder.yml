@@ -3,9 +3,15 @@ productName: tool-app
 directories:
   output: release
   buildResources: build
+# build/icon.png (1024x1024) is picked up automatically from buildResources
+# and used to generate the installer/app icon for every platform.
+icon: build/icon.png
 files:
   - out/**
   - package.json
+  # Bundled so the running app (taskbar/title bar icon on Windows and Linux)
+  # can load it at runtime — see ICON_PATH in src/main/index.ts.
+  - resources/**
 # The ffmpeg/ffprobe binaries cannot be executed from inside app.asar, so they
 # are unpacked next to it (see unpackedPath() in src/main/binaries.ts).
 asarUnpack:
