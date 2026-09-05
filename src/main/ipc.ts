@@ -9,14 +9,17 @@ import {
   useManualYtdlp,
 } from "./binaries";
 import * as converter from "./converter";
+import * as docConverter from "./docConverter";
 import * as youtube from "./youtube";
 import * as jobs from "./jobs";
 import { sanitizeFilename } from "./filename";
 import { checkForUpdates, currentUpdateStatus, quitAndInstall } from "./updater";
 import {
   CONVERT_TARGETS,
+  DOCUMENT_TARGETS,
   YOUTUBE_FORMATS,
   type ConvertTarget,
+  type DocumentTarget,
   type JobProgress,
   type JobResult,
   type ToolStatus,
@@ -27,6 +30,7 @@ import {
 const VIDEO_EXTENSIONS = ["mp4", "mkv", "mov", "webm", "avi", "flv", "wmv", "m4v", "mpg", "mpeg"];
 const AUDIO_EXTENSIONS = ["mp3", "wav", "m4a", "aac", "ogg", "opus", "flac", "wma"];
 const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "webp", "bmp", "tif", "tiff"];
+const DOCUMENT_EXTENSIONS = ["pdf", "docx", "txt"];
 
 function isYoutubeFormat(value: unknown): value is YoutubeFormat {
   return typeof value === "string" && (YOUTUBE_FORMATS as readonly string[]).includes(value);
@@ -34,6 +38,10 @@ function isYoutubeFormat(value: unknown): value is YoutubeFormat {
 
 function isConvertTarget(value: unknown): value is ConvertTarget {
   return typeof value === "string" && (CONVERT_TARGETS as readonly string[]).includes(value);
+}
+
+function isDocumentTarget(value: unknown): value is DocumentTarget {
+  return typeof value === "string" && (DOCUMENT_TARGETS as readonly string[]).includes(value);
 }
 
 /** Sends progress back to the window that started the job. */
@@ -109,12 +117,18 @@ export function registerIpcHandlers(): void {
       properties: ["openFile"],
       filters: [
         {
-          name: "Medien",
-          extensions: [...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS, ...IMAGE_EXTENSIONS],
+          name: "Medien & Dokumente",
+          extensions: [
+            ...VIDEO_EXTENSIONS,
+            ...AUDIO_EXTENSIONS,
+            ...IMAGE_EXTENSIONS,
+            ...DOCUMENT_EXTENSIONS,
+          ],
         },
         { name: "Video", extensions: VIDEO_EXTENSIONS },
         { name: "Audio", extensions: AUDIO_EXTENSIONS },
         { name: "Bilder", extensions: IMAGE_EXTENSIONS },
+        { name: "Dokumente", extensions: DOCUMENT_EXTENSIONS },
         { name: "Alle Dateien", extensions: ["*"] },
       ],
     };
@@ -207,6 +221,43 @@ export function registerIpcHandlers(): void {
         return { ok: false, error: "Kein Speicherort gewählt." };
       }
       return converter.convert({
+        jobId: String(args.jobId),
+        inputPath: args.inputPath,
+        target: args.target,
+        savePath: args.savePath,
+        onProgress: progressSender(windowFor(event), String(args.jobId)),
+      });
+    },
+  );
+
+  ipcMain.handle(
+    "document:probe",
+    async (_event, inputPath: unknown) => {
+      try {
+        const info = await docConverter.probe(String(inputPath ?? ""));
+        return { ok: true as const, info };
+      } catch (error) {
+        return { ok: false as const, error: (error as Error).message };
+      }
+    },
+  );
+
+  ipcMain.handle(
+    "document:convert",
+    async (
+      event,
+      args: { jobId: string; inputPath: string; target: string; savePath: string },
+    ): Promise<JobResult> => {
+      if (!isDocumentTarget(args?.target)) {
+        return { ok: false, error: "Ungültiges Zielformat." };
+      }
+      if (typeof args.inputPath !== "string" || !args.inputPath) {
+        return { ok: false, error: "Keine Datei ausgewählt." };
+      }
+      if (typeof args.savePath !== "string" || !args.savePath) {
+        return { ok: false, error: "Kein Speicherort gewählt." };
+      }
+      return docConverter.convert({
         jobId: String(args.jobId),
         inputPath: args.inputPath,
         target: args.target,

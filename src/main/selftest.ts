@@ -20,6 +20,7 @@ import {
   useManualYtdlp,
 } from "./binaries";
 import * as converter from "./converter";
+import * as docConverter from "./docConverter";
 import * as youtube from "./youtube";
 import { sanitizeFilename } from "./filename";
 import { largestFileIn } from "./fsutil";
@@ -293,6 +294,86 @@ async function main(): Promise<void> {
       onProgress: () => {},
     });
     check("Datei ohne Tonspur nach MP3 wird abgelehnt", !videoToAudioOnlySource.ok);
+
+    // --- Dokumentenkonvertierung --------------------------------------------
+    const txtFile = path.join(tmp, "dokument.txt");
+    await writeFile(
+      txtFile,
+      "Erster Absatz mit ein wenig Text.\n\nZweiter Absatz mit noch mehr Text.",
+      "utf-8",
+    );
+
+    const txtInfo = await docConverter.probe(txtFile);
+    check(
+      "Dokument-Probe erkennt TXT",
+      txtInfo.format === "txt" && txtInfo.pageCount === null && txtInfo.characterCount > 0,
+      JSON.stringify(txtInfo),
+    );
+
+    const pdfFromTxt = path.join(tmp, "aus-txt.pdf");
+    const txtToPdf = await docConverter.convert({
+      jobId: "selftest-doc-txt-pdf",
+      inputPath: txtFile,
+      target: "pdf",
+      savePath: pdfFromTxt,
+      onProgress: () => {},
+    });
+    check(
+      "TXT nach PDF",
+      txtToPdf.ok && (await fileSize(pdfFromTxt)) > 0,
+      txtToPdf.ok ? "" : txtToPdf.error,
+    );
+
+    const pdfInfo = await docConverter.probe(pdfFromTxt);
+    check(
+      "Dokument-Probe erkennt PDF und Seitenzahl",
+      pdfInfo.format === "pdf" && pdfInfo.pageCount === 1 && pdfInfo.characterCount > 0,
+      JSON.stringify(pdfInfo),
+    );
+
+    const docxFromPdf = path.join(tmp, "aus-pdf.docx");
+    const pdfToDocx = await docConverter.convert({
+      jobId: "selftest-doc-pdf-docx",
+      inputPath: pdfFromTxt,
+      target: "docx",
+      savePath: docxFromPdf,
+      onProgress: () => {},
+    });
+    check(
+      "PDF nach DOCX",
+      pdfToDocx.ok && (await fileSize(docxFromPdf)) > 0,
+      pdfToDocx.ok ? "" : pdfToDocx.error,
+    );
+
+    const txtFromDocx = path.join(tmp, "aus-docx.txt");
+    const docxToTxt = await docConverter.convert({
+      jobId: "selftest-doc-docx-txt",
+      inputPath: docxFromPdf,
+      target: "txt",
+      savePath: txtFromDocx,
+      onProgress: () => {},
+    });
+    check(
+      "DOCX nach TXT",
+      docxToTxt.ok && (await fileSize(txtFromDocx)) > 0,
+      docxToTxt.ok ? "" : docxToTxt.error,
+    );
+
+    const brokenDoc = path.join(tmp, "kaputt.pdf");
+    await writeFile(brokenDoc, "kein PDF");
+    const docProbeRejected = await docConverter
+      .probe(brokenDoc)
+      .then(() => false)
+      .catch(() => true);
+    check("Kaputtes Dokument wird abgewiesen", docProbeRejected);
+
+    const unsupportedDoc = path.join(tmp, "unbekannt.xyz");
+    await writeFile(unsupportedDoc, "egal");
+    const docProbeUnsupported = await docConverter
+      .probe(unsupportedDoc)
+      .then(() => false)
+      .catch(() => true);
+    check("Unbekanntes Dokumentformat wird abgewiesen", docProbeUnsupported);
 
     // --- Hilfsfunktionen ----------------------------------------------------
     check("largestFileIn findet die größte Datei", (await largestFileIn(tmp))!.length > 0);

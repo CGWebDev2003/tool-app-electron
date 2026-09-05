@@ -18,6 +18,16 @@ export const CONVERT_TARGETS = [
 ] as const;
 export type ConvertTarget = (typeof CONVERT_TARGETS)[number];
 
+export const DOCUMENT_TARGETS = ["pdf", "docx", "txt"] as const;
+export type DocumentTarget = (typeof DOCUMENT_TARGETS)[number];
+
+export type DocumentInfo = {
+  format: DocumentTarget;
+  /** Only known for PDFs. */
+  pageCount: number | null;
+  characterCount: number;
+};
+
 /** Result shape shared by every long-running job. */
 export type JobResult =
   | { ok: true; outputPath: string }
