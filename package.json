@@ -16,9 +16,11 @@
     "postinstall": "electron-builder install-app-deps",
     "package": "npm run build && electron-builder --dir",
     "dist": "npm run build && electron-builder",
+    "dist:publish": "npm run build && electron-builder --publish always",
     "test": "npm run build && electron out/main/selftest.js"
   },
   "dependencies": {
+    "electron-updater": "^6.3.9",
     "ffmpeg-static": "^5.3.0",
     "ffprobe-static": "^3.1.0",
     "pdf-lib": "^1.17.1",

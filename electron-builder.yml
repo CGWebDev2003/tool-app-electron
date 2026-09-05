@@ -25,3 +25,10 @@ mac:
 linux:
   target: AppImage
   category: Utility
+# electron-updater reads the latest release's artifacts + latest*.yml from
+# here to check for and download updates. Publishing (npm run dist:publish)
+# needs a GH_TOKEN with `repo` scope in the environment.
+publish:
+  provider: github
+  owner: CGWebDev2003
+  repo: tool-app-electron
