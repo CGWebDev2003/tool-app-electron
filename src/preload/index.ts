@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type {
   ConvertTarget,
+  DocumentInfo,
+  DocumentTarget,
   JobProgress,
   JobResult,
   MediaInfo,
@@ -44,6 +46,18 @@ const api = {
       target: ConvertTarget;
       savePath: string;
     }): Promise<JobResult> => ipcRenderer.invoke("convert:run", args),
+  },
+  document: {
+    probe: (
+      inputPath: string,
+    ): Promise<{ ok: true; info: DocumentInfo } | { ok: false; error: string }> =>
+      ipcRenderer.invoke("document:probe", inputPath),
+    run: (args: {
+      jobId: string;
+      inputPath: string;
+      target: DocumentTarget;
+      savePath: string;
+    }): Promise<JobResult> => ipcRenderer.invoke("document:convert", args),
   },
   job: {
     cancel: (jobId: string): Promise<boolean> => ipcRenderer.invoke("job:cancel", jobId),
