@@ -11,6 +11,7 @@ import { chmod, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {
+  describeSpawnError,
   FFMPEG_PATH,
   ffmpegAvailable,
   installYtdlp,
@@ -239,6 +240,28 @@ async function main(): Promise<void> {
       "Eine fehlende Datei nennt den Grund",
       !missingBinary.ok && /nicht gefunden/i.test(missingBinary.error),
       missingBinary.ok ? "" : missingBinary.error,
+    );
+
+    const spawnErrors: Array<[NodeJS.ErrnoException, string]> = [
+      [Object.assign(new Error("spawn ENOENT"), { code: "ENOENT" }), "nicht gefunden"],
+      [Object.assign(new Error("spawn EACCES"), { code: "EACCES" }), "Ausführungsrechte"],
+    ];
+    for (const [error, expected] of spawnErrors) {
+      check(
+        `Spawn-Fehler ${error.code} wird erklärt`,
+        describeSpawnError(error).includes(expected),
+        describeSpawnError(error),
+      );
+    }
+    // "spawn UNKNOWN" is what a Defender-blocked executable looks like on
+    // Windows; only there may it be read that way.
+    const unknown = Object.assign(new Error("spawn UNKNOWN"), { code: "UNKNOWN" });
+    check(
+      "spawn UNKNOWN wird plattformgerecht gedeutet",
+      process.platform === "win32"
+        ? describeSpawnError(unknown).includes("blockiert")
+        : describeSpawnError(unknown) === "spawn UNKNOWN",
+      describeSpawnError(unknown),
     );
 
     check(

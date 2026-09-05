@@ -73,6 +73,29 @@ export function managedYtdlpPath(): string {
 type VersionCheck = { ok: true; version: string } | { ok: false; reason: string };
 
 /**
+ * Turns a spawn failure into a concrete reason. Windows deserves special care:
+ * when Defender blocks process creation, CreateProcess answers with
+ * ERROR_VIRUS_INFECTED, which libuv cannot map and reports as "UNKNOWN". On
+ * that platform an unmapped spawn error is therefore almost always a blocked
+ * executable, not a mystery.
+ */
+export function describeSpawnError(error: NodeJS.ErrnoException): string {
+  if (error.code === "ENOENT") {
+    return "Die Datei wurde nicht gefunden (möglicherweise von einem Virenscanner entfernt).";
+  }
+  if (error.code === "EACCES" || error.code === "EPERM") {
+    return "Keine Ausführungsrechte für die Datei.";
+  }
+  if (process.platform === "win32" && (error.code === "UNKNOWN" || /UNKNOWN/.test(error.message))) {
+    return (
+      "Windows hat das Starten der Datei blockiert. Das meldet der Virenscanner, wenn er die " +
+      "Datei für Schadsoftware hält — bei yt-dlp ist das ein bekannter Fehlalarm."
+    );
+  }
+  return error.message;
+}
+
+/**
  * Runs `<binary> --version`, keeping the real failure reason. The reason is
  * what tells a user whether the file is missing, blocked, or simply broken,
  * so it must not be collapsed into a plain null.
@@ -84,9 +107,11 @@ function checkVersion(binary: string, flag = "--version"): Promise<VersionCheck>
     let proc: ReturnType<typeof spawn>;
 
     try {
+      // On Windows spawn can throw synchronously instead of emitting "error",
+      // which would otherwise escape this promise as a raw "spawn UNKNOWN".
       proc = spawn(binary, [flag], { windowsHide: true });
     } catch (error) {
-      resolve({ ok: false, reason: `Start nicht möglich: ${(error as Error).message}` });
+      resolve({ ok: false, reason: describeSpawnError(error as NodeJS.ErrnoException) });
       return;
     }
 
@@ -94,13 +119,7 @@ function checkVersion(binary: string, flag = "--version"): Promise<VersionCheck>
     proc.stderr?.on("data", (chunk: Buffer) => (stderr += chunk.toString()));
 
     proc.on("error", (error: NodeJS.ErrnoException) => {
-      const detail =
-        error.code === "ENOENT"
-          ? "Die Datei wurde nicht gefunden (möglicherweise von einem Virenscanner entfernt)."
-          : error.code === "EACCES"
-            ? "Keine Ausführungsrechte für die Datei."
-            : error.message;
-      resolve({ ok: false, reason: detail });
+      resolve({ ok: false, reason: describeSpawnError(error) });
     });
 
     proc.on("close", (code) => {
@@ -186,20 +205,32 @@ async function explainVerifyFailure(binaryPath: string, reason: string): Promise
     .then(() => true)
     .catch(() => false);
 
+  const manualHint =
+    process.platform === "win32"
+      ? 'yt-dlp separat installieren ("winget install yt-dlp.yt-dlp") und hier auf ' +
+        '"Manuell auswählen" klicken'
+      : process.platform === "darwin"
+        ? 'yt-dlp separat installieren ("brew install yt-dlp") und hier auf "Manuell auswählen" ' +
+          "klicken"
+        : 'yt-dlp über die Paketverwaltung installieren und hier auf "Manuell auswählen" klicken';
+
   if (!stillThere) {
     return (
-      "Die heruntergeladene Datei wurde direkt wieder entfernt — das macht fast immer ein " +
-      "Virenscanner (Windows Defender meldet yt-dlp häufig fälschlich). Nimm yt-dlp in die " +
-      "Ausnahmen auf, oder installiere es separat (unter Windows \"winget install yt-dlp.yt-dlp\") und wähle " +
-      "es über \"yt-dlp manuell auswählen\" aus."
+      "Die heruntergeladene Datei wurde sofort wieder entfernt — das macht praktisch immer ein " +
+      "Virenscanner. Entweder yt-dlp dort als Ausnahme eintragen und es erneut versuchen, " +
+      `oder ${manualHint}.`
     );
   }
 
+  const defenderHint =
+    process.platform === "win32"
+      ? " Unter Windows steht der Vorgang in der Windows-Sicherheit unter „Viren- und " +
+        "Bedrohungsschutz“ → „Schutzverlauf“; dort lässt sich die Datei auch zulassen."
+      : "";
+
   return (
-    `Die Datei liegt unter ${binaryPath}, lässt sich aber nicht starten: ${reason} — ` +
-    "häufig blockiert das ein Virenscanner. Andernfalls installiere yt-dlp separat " +
-    '("winget install yt-dlp.yt-dlp" unter Windows, "brew install yt-dlp" unter macOS) ' +
-    "und wähle es manuell aus."
+    `${reason} Die Datei selbst liegt unter ${binaryPath}.${defenderHint} ` +
+    `Alternativ ${manualHint}.`
   );
 }
 

@@ -49,6 +49,11 @@ nach dem Herunterladen wieder. Zwei Wege führen zum Ziel:
 Weitere Gründe, die die App unterscheidet: kein Zugang zu github.com (Firewall/Proxy), ein
 abgebrochener Download und eine Netzwerksperre, die statt der Datei eine HTML-Seite ausliefert.
 
+Meldet Windows beim Start `spawn UNKNOWN`, ist das derselbe Fall: Windows verweigert das Ausführen
+der Datei, weil der Virenscanner sie für Schadsoftware hält. Nachsehen lässt sich das in der
+Windows-Sicherheit unter „Viren- und Bedrohungsschutz" → „Schutzverlauf"; dort kann die Datei auch
+zugelassen werden.
+
 ## Skripte
 
 | Befehl             | Zweck                                                              |
