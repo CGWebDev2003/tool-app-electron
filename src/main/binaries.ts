@@ -190,7 +190,7 @@ async function explainVerifyFailure(binaryPath: string, reason: string): Promise
     return (
       "Die heruntergeladene Datei wurde direkt wieder entfernt — das macht fast immer ein " +
       "Virenscanner (Windows Defender meldet yt-dlp häufig fälschlich). Nimm yt-dlp in die " +
-      "Ausnahmen auf, oder installiere es separat (z. B. \"winget install yt-dlp\") und wähle " +
+      "Ausnahmen auf, oder installiere es separat (unter Windows \"winget install yt-dlp.yt-dlp\") und wähle " +
       "es über \"yt-dlp manuell auswählen\" aus."
     );
   }
@@ -198,7 +198,8 @@ async function explainVerifyFailure(binaryPath: string, reason: string): Promise
   return (
     `Die Datei liegt unter ${binaryPath}, lässt sich aber nicht starten: ${reason} — ` +
     "häufig blockiert das ein Virenscanner. Andernfalls installiere yt-dlp separat " +
-    '(z. B. "winget install yt-dlp", "brew install yt-dlp") und wähle es manuell aus.'
+    '("winget install yt-dlp.yt-dlp" unter Windows, "brew install yt-dlp" unter macOS) ' +
+    "und wähle es manuell aus."
   );
 }
 

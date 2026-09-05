@@ -38,7 +38,8 @@ nach dem Herunterladen wieder. Zwei Wege führen zum Ziel:
 2. yt-dlp selbst installieren und über **„Manuell auswählen"** im Programm angeben:
 
    ```powershell
-   winget install yt-dlp          # Windows
+   winget install yt-dlp.yt-dlp   # Windows — die vollständige ID ist nötig, sonst
+                                  # meldet winget mehrere Treffer
    brew install yt-dlp            # macOS
    sudo apt install yt-dlp        # Debian/Ubuntu
    ```
