@@ -1,19 +1,21 @@
 name: Release
 
 # electron-updater checks GitHub Releases for updates, so a release needs the
-# installer/AppImage/dmg *and* the generated latest*.yml files uploaded
-# together for every platform (see `publish` in electron-builder.yml).
+# installer *and* the generated latest.yml uploaded together (see `publish`
+# in electron-builder.yml).
 on:
   push:
     tags:
       - "v*.*.*"
 
+permissions:
+  # electron-builder creates the GitHub release and uploads assets to it —
+  # the default read-only GITHUB_TOKEN gets a 403 doing that.
+  contents: write
+
 jobs:
   release:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -22,6 +24,13 @@ jobs:
           node-version: 20
 
       - run: npm ci
+
+      # electron-builder publishes under package.json's version, not the git
+      # tag, so keep them in lockstep or the update feed looks in the wrong
+      # place.
+      - name: Sync package.json version with the tag
+        shell: bash
+        run: npm version --no-git-tag-version "${GITHUB_REF_NAME#v}"
 
       - run: npm run dist:publish
         env:
