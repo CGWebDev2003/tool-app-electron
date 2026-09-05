@@ -12,6 +12,7 @@ import * as converter from "./converter";
 import * as youtube from "./youtube";
 import * as jobs from "./jobs";
 import { sanitizeFilename } from "./filename";
+import { checkForUpdates, currentUpdateStatus, quitAndInstall } from "./updater";
 import {
   CONVERT_TARGETS,
   YOUTUBE_FORMATS,
@@ -19,6 +20,7 @@ import {
   type JobProgress,
   type JobResult,
   type ToolStatus,
+  type UpdateStatus,
   type YoutubeFormat,
 } from "@shared/types";
 
@@ -235,4 +237,8 @@ export function registerIpcHandlers(): void {
     const target = String(filePath ?? "");
     if (target) shell.showItemInFolder(path.resolve(target));
   });
+
+  ipcMain.handle("update:status", (): UpdateStatus => currentUpdateStatus());
+  ipcMain.handle("update:check", () => checkForUpdates());
+  ipcMain.handle("update:install", () => quitAndInstall());
 }

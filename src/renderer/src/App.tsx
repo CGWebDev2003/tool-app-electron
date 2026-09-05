@@ -4,7 +4,9 @@ import Dashboard from "./pages/Dashboard";
 import YoutubeDownload from "./pages/YoutubeDownload";
 import Converter from "./pages/Converter";
 import PdfEditor from "./pages/PdfEditor";
+import UpdateBanner from "./components/UpdateBanner";
 import { useToolStatus } from "./hooks/useToolStatus";
+import { useUpdateStatus } from "./hooks/useUpdateStatus";
 import styles from "./App.module.css";
 
 function routeFromHash(): RouteId {
@@ -16,6 +18,7 @@ function routeFromHash(): RouteId {
 export default function App() {
   const [route, setRoute] = useState<RouteId>(routeFromHash);
   const status = useToolStatus();
+  const update = useUpdateStatus();
 
   // Hash-based routing keeps the back/forward shortcuts working and survives
   // renderer hot reloads without losing the current page.
@@ -33,6 +36,7 @@ export default function App() {
     <div className={styles.shell}>
       <Sidebar active={route} onNavigate={navigate} />
       <main className={styles.content}>
+        <UpdateBanner update={update} />
         {route === "dashboard" && <Dashboard status={status} onNavigate={navigate} />}
         {route === "youtube-download" && <YoutubeDownload status={status} />}
         {route === "converter" && <Converter status={status} />}

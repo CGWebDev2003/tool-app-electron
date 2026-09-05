@@ -2,6 +2,7 @@ import { app, BrowserWindow, shell } from "electron";
 import path from "node:path";
 import { registerIpcHandlers } from "./ipc";
 import * as jobs from "./jobs";
+import { initAutoUpdater } from "./updater";
 
 const isDev = !app.isPackaged;
 
@@ -62,6 +63,7 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(() => {
     registerIpcHandlers();
     createWindow();
+    initAutoUpdater();
 
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();

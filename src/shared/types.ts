@@ -38,6 +38,16 @@ export type ToolStatus = {
 /** Where the yt-dlp binary came from — decides whether we may auto-update it. */
 export type YtdlpSource = "managed" | "manual" | "system" | "env" | "none";
 
+/** State machine of an electron-updater check, mirrored 1:1 to the renderer. */
+export type UpdateStatus =
+  | { state: "idle" }
+  | { state: "checking" }
+  | { state: "available"; version: string }
+  | { state: "not-available" }
+  | { state: "downloading"; percent: number }
+  | { state: "downloaded"; version: string }
+  | { state: "error"; message: string };
+
 export type MediaInfo = {
   hasVideo: boolean;
   hasAudio: boolean;

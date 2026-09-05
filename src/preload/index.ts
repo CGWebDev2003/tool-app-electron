@@ -5,6 +5,7 @@ import type {
   JobResult,
   MediaInfo,
   ToolStatus,
+  UpdateStatus,
   YoutubeFormat,
 } from "@shared/types";
 
@@ -58,11 +59,22 @@ const api = {
     revealFile: (filePath: string): Promise<void> =>
       ipcRenderer.invoke("shell:revealFile", filePath),
   },
+  update: {
+    status: (): Promise<UpdateStatus> => ipcRenderer.invoke("update:status"),
+    check: (): Promise<void> => ipcRenderer.invoke("update:check"),
+    install: (): Promise<void> => ipcRenderer.invoke("update:install"),
+  },
   /** Returns an unsubscribe function. */
   onJobProgress: (listener: (progress: JobProgress) => void): (() => void) => {
     const handler = (_event: unknown, progress: JobProgress) => listener(progress);
     ipcRenderer.on("job:progress", handler);
     return () => ipcRenderer.removeListener("job:progress", handler);
+  },
+  /** Returns an unsubscribe function. */
+  onUpdateStatus: (listener: (status: UpdateStatus) => void): (() => void) => {
+    const handler = (_event: unknown, status: UpdateStatus) => listener(status);
+    ipcRenderer.on("update:status", handler);
+    return () => ipcRenderer.removeListener("update:status", handler);
   },
 };
 
