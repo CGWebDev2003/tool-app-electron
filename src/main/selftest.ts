@@ -42,6 +42,23 @@ function run(binary: string, args: string[]): Promise<{ code: number; stderr: st
   });
 }
 
+/** Reads the top-left pixel of an image, to prove what a filter actually did. */
+async function firstPixel(ffmpeg: string, imagePath: string): Promise<number[] | null> {
+  return new Promise((resolve) => {
+    const proc = spawn(ffmpeg, [
+      "-v", "quiet", "-i", imagePath, "-frames:v", "1",
+      "-f", "rawvideo", "-pix_fmt", "rgb24", "pipe:1",
+    ]);
+    const chunks: Buffer[] = [];
+    proc.stdout.on("data", (chunk: Buffer) => chunks.push(chunk));
+    proc.on("error", () => resolve(null));
+    proc.on("close", () => {
+      const data = Buffer.concat(chunks);
+      resolve(data.length >= 3 ? [data[0], data[1], data[2]] : null);
+    });
+  });
+}
+
 async function fileSize(filePath: string): Promise<number> {
   return (await stat(filePath).catch(() => null))?.size ?? 0;
 }
@@ -84,6 +101,21 @@ async function main(): Promise<void> {
     ]);
     check("Testaudio mit Cover-Art erzeugt", result.code === 0, result.stderr.slice(0, 160));
 
+    const imageFile = path.join(tmp, "bild.png");
+    result = await run(ffmpeg, [
+      "-loglevel", "error", "-f", "lavfi", "-i", "testsrc=size=320x240",
+      "-frames:v", "1", "-y", imageFile,
+    ]);
+    check("Testbild erzeugt", result.code === 0, result.stderr.slice(0, 160));
+
+    // 40 % red on nothing — the alpha handling below has a known target colour.
+    const transparentImage = path.join(tmp, "transparent.png");
+    result = await run(ffmpeg, [
+      "-loglevel", "error", "-f", "lavfi", "-i", "color=c=red@0.4:s=200x150,format=rgba",
+      "-frames:v", "1", "-y", transparentImage,
+    ]);
+    check("Transparentes Testbild erzeugt", result.code === 0, result.stderr.slice(0, 160));
+
     // --- probe ------------------------------------------------------------
     const videoInfo = await converter.probe(videoFile);
     check("probe erkennt Video und Audio", videoInfo.hasVideo && videoInfo.hasAudio);
@@ -100,6 +132,21 @@ async function main(): Promise<void> {
 
     const coverInfo = await converter.probe(audioWithCover);
     check("Cover-Art wird nicht als Videospur gewertet", !coverInfo.hasVideo && coverInfo.hasAudio);
+
+    const imageInfo = await converter.probe(imageFile);
+    check(
+      "probe erkennt ein Bild",
+      imageInfo.isImage && !imageInfo.hasAudio && !imageInfo.hasVideo,
+      JSON.stringify(imageInfo),
+    );
+    check(
+      "probe liest die Bildgröße",
+      imageInfo.width === 320 && imageInfo.height === 240,
+      `${imageInfo.width}x${imageInfo.height}`,
+    );
+    check("Ein Bild hat keine Dauer", imageInfo.durationSeconds === null);
+    check("Ein Video ist kein Bild", !videoInfo.isImage);
+    check("Cover-Art gilt nicht als Bilddatei", !coverInfo.isImage && coverInfo.hasCoverArt);
 
     const brokenFile = path.join(tmp, "broken.mp4");
     await writeFile(brokenFile, "keine Mediendatei");
@@ -123,6 +170,18 @@ async function main(): Promise<void> {
       ["Audio nach WebM (schwarzes Bild)", audioFile, "webm"],
       ["Audio mit Cover nach MP3", audioWithCover, "mp3"],
       ["Audio mit Cover nach MP4", audioWithCover, "mp4"],
+      ["Bild nach PNG", imageFile, "png"],
+      ["Bild nach JPG", imageFile, "jpg"],
+      ["Bild nach WebP", imageFile, "webp"],
+      ["Bild nach BMP", imageFile, "bmp"],
+      ["Bild nach TIFF", imageFile, "tiff"],
+      ["Bild nach GIF", imageFile, "gif"],
+      ["Bild nach MP4 (Standbild-Clip)", imageFile, "mp4"],
+      ["Video nach PNG (erstes Bild)", videoFile, "png"],
+      ["Video nach JPG (erstes Bild)", videoFile, "jpg"],
+      ["Cover-Bild aus Audiodatei nach PNG", audioWithCover, "png"],
+      ["Transparentes Bild nach JPG", transparentImage, "jpg"],
+      ["Transparentes Bild nach WebP", transparentImage, "webp"],
     ];
 
     let index = 0;
@@ -142,6 +201,45 @@ async function main(): Promise<void> {
       check(name, conversion.ok && size > 0, conversion.ok ? `${size} Bytes` : conversion.error);
     }
     check("Fortschritt wird gemeldet", sawProgress);
+
+    // --- Bildspezifische Prüfungen -------------------------------------------
+    const jpgFromImage = path.join(tmp, "masse.jpg");
+    await converter.convert({
+      jobId: "selftest-size", inputPath: imageFile, target: "jpg",
+      savePath: jpgFromImage, onProgress: () => {},
+    });
+    const jpgInfo = await converter.probe(jpgFromImage);
+    check(
+      "Die Bildgröße bleibt erhalten",
+      jpgInfo.width === 320 && jpgInfo.height === 240,
+      `${jpgInfo.width}x${jpgInfo.height}`,
+    );
+
+    // Transparency must be composited onto white, not dropped — dropping it
+    // turns a semi-transparent red into full red instead of pink.
+    const flattened = path.join(tmp, "flach.jpg");
+    await converter.convert({
+      jobId: "selftest-flat", inputPath: transparentImage, target: "jpg",
+      savePath: flattened, onProgress: () => {},
+    });
+    const pixel = await firstPixel(ffmpeg, flattened);
+    check(
+      "Transparenz wird auf Weiß flachgelegt statt verworfen",
+      pixel !== null && pixel[0] > 240 && pixel[1] > 130 && pixel[1] < 175 && pixel[2] > 130,
+      pixel ? pixel.join(",") : "kein Pixel lesbar",
+    );
+
+    const stillClip = path.join(tmp, "standbild.mp4");
+    await converter.convert({
+      jobId: "selftest-still", inputPath: imageFile, target: "mp4",
+      savePath: stillClip, onProgress: () => {},
+    });
+    const clipInfo = await converter.probe(stillClip);
+    check(
+      "Ein Bild wird zu einem Video mit Laufzeit",
+      clipInfo.hasVideo && clipInfo.durationSeconds !== null && clipInfo.durationSeconds > 4,
+      String(clipInfo.durationSeconds),
+    );
 
     // --- Erwartete Fehlerfälle ---------------------------------------------
     const gifPath = path.join(tmp, "unmoeglich.gif");
@@ -164,6 +262,28 @@ async function main(): Promise<void> {
     });
     check("Identische Quelle und Ziel werden abgelehnt", !sameFile.ok);
     check("Die Quelldatei ist unversehrt", (await fileSize(videoFile)) > 0);
+
+    const imageToAudio = await converter.convert({
+      jobId: "selftest-img-audio",
+      inputPath: imageFile,
+      target: "mp3",
+      savePath: path.join(tmp, "bild.mp3"),
+      onProgress: () => {},
+    });
+    check("Bild nach MP3 wird abgelehnt", !imageToAudio.ok, imageToAudio.ok ? "" : imageToAudio.error);
+
+    const audioToImage = await converter.convert({
+      jobId: "selftest-audio-img",
+      inputPath: audioFile,
+      target: "png",
+      savePath: path.join(tmp, "ton.png"),
+      onProgress: () => {},
+    });
+    check(
+      "Audio ohne Cover nach PNG wird mit Hinweis abgelehnt",
+      !audioToImage.ok && audioToImage.error.includes("Cover"),
+      audioToImage.ok ? "" : audioToImage.error,
+    );
 
     const videoToAudioOnlySource = await converter.convert({
       jobId: "selftest-noaudio",

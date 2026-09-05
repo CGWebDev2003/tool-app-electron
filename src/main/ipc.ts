@@ -23,6 +23,7 @@ import {
 
 const VIDEO_EXTENSIONS = ["mp4", "mkv", "mov", "webm", "avi", "flv", "wmv", "m4v", "mpg", "mpeg"];
 const AUDIO_EXTENSIONS = ["mp3", "wav", "m4a", "aac", "ogg", "opus", "flac", "wma"];
+const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "webp", "bmp", "tif", "tiff"];
 
 function isYoutubeFormat(value: unknown): value is YoutubeFormat {
   return typeof value === "string" && (YOUTUBE_FORMATS as readonly string[]).includes(value);
@@ -104,9 +105,13 @@ export function registerIpcHandlers(): void {
       title: "Datei auswählen",
       properties: ["openFile"],
       filters: [
-        { name: "Medien", extensions: [...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS] },
+        {
+          name: "Medien",
+          extensions: [...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS, ...IMAGE_EXTENSIONS],
+        },
         { name: "Video", extensions: VIDEO_EXTENSIONS },
         { name: "Audio", extensions: AUDIO_EXTENSIONS },
+        { name: "Bilder", extensions: IMAGE_EXTENSIONS },
         { name: "Alle Dateien", extensions: ["*"] },
       ],
     };

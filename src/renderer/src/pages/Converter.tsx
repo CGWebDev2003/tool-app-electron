@@ -15,7 +15,7 @@ const TARGET_GROUPS: Array<{
       { value: "mp4", label: "MP4" },
       { value: "webm", label: "WebM" },
       { value: "mov", label: "MOV" },
-      { value: "gif", label: "GIF (aus Video)" },
+      { value: "gif", label: "GIF" },
     ],
   },
   {
@@ -25,6 +25,16 @@ const TARGET_GROUPS: Array<{
       { value: "wav", label: "WAV" },
       { value: "m4a", label: "M4A" },
       { value: "ogg", label: "OGG" },
+    ],
+  },
+  {
+    label: "Bild",
+    options: [
+      { value: "png", label: "PNG" },
+      { value: "jpg", label: "JPG" },
+      { value: "webp", label: "WebP" },
+      { value: "bmp", label: "BMP" },
+      { value: "tiff", label: "TIFF" },
     ],
   },
 ];
@@ -39,6 +49,29 @@ function formatDuration(seconds: number): string {
   const total = Math.round(seconds);
   const minutes = Math.floor(total / 60);
   return `${minutes}:${String(total % 60).padStart(2, "0")} min`;
+}
+
+/** One line saying what the chosen file actually is. */
+function describeMedia(info: MediaInfo): string {
+  const size = info.width && info.height ? `${info.width} × ${info.height}` : null;
+
+  if (info.isImage) {
+    return ["Bild", size].filter(Boolean).join(" · ");
+  }
+
+  const tracks = [
+    info.hasVideo && "Video",
+    info.hasAudio && "Audio",
+    info.hasCoverArt && "Cover-Bild",
+  ].filter(Boolean);
+
+  const parts = [
+    tracks.length ? `Enthält: ${tracks.join(" + ")}` : "Keine Medienspur",
+    info.hasVideo && size,
+    info.durationSeconds !== null && `Länge ${formatDuration(info.durationSeconds)}`,
+  ].filter(Boolean);
+
+  return parts.join(" · ");
 }
 
 export default function Converter({ status }: { status: ToolStatusState }) {
@@ -79,7 +112,7 @@ export default function Converter({ status }: { status: ToolStatusState }) {
     <div>
       <h1 className={styles.heading}>Converter</h1>
       <p className={styles.subheading}>
-        Wandelt Video- und Audiodateien um. ffmpeg ist in der App enthalten — es muss nichts
+        Wandelt Video-, Audio- und Bilddateien um. ffmpeg ist in der App enthalten — es muss nichts
         installiert werden.
       </p>
 
@@ -129,12 +162,7 @@ export default function Converter({ status }: { status: ToolStatusState }) {
         </button>
       </form>
 
-      {info && (
-        <p className={styles.fileDetails}>
-          Enthält: {[info.hasVideo && "Video", info.hasAudio && "Audio"].filter(Boolean).join(" + ") || "keine Medienspur"}
-          {info.durationSeconds !== null && ` · Länge ${formatDuration(info.durationSeconds)}`}
-        </p>
-      )}
+      {info && <p className={styles.fileDetails}>{describeMedia(info)}</p>}
 
       <JobStatus job={job} successVerb="konvertiert" onCancel={job.cancel} />
     </div>

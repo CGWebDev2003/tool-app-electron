@@ -7,7 +7,7 @@ import type { ConvertTarget, JobResult, MediaInfo } from "@shared/types";
 
 export class UserError extends Error {}
 
-export const TARGET_CATEGORY: Record<ConvertTarget, "video" | "audio"> = {
+export const TARGET_CATEGORY: Record<ConvertTarget, "video" | "audio" | "image"> = {
   mp4: "video",
   webm: "video",
   mov: "video",
@@ -16,7 +16,32 @@ export const TARGET_CATEGORY: Record<ConvertTarget, "video" | "audio"> = {
   wav: "audio",
   m4a: "audio",
   ogg: "audio",
+  png: "image",
+  jpg: "image",
+  webp: "image",
+  bmp: "image",
+  tiff: "image",
 };
+
+const IMAGE_CODEC_ARGS: Record<string, string[]> = {
+  png: ["-c:v", "png"],
+  jpg: ["-c:v", "mjpeg", "-q:v", "2"],
+  webp: ["-c:v", "libwebp", "-quality", "90"],
+  bmp: ["-c:v", "bmp"],
+  tiff: ["-c:v", "tiff"],
+};
+
+/** Targets with no alpha channel — transparency has to be flattened first. */
+const OPAQUE_TARGETS = new Set<ConvertTarget>(["jpg", "bmp"]);
+
+/** Pixel format the flattened frame is handed to the encoder in. */
+const FLATTEN_PIXEL_FORMAT: Record<string, string> = {
+  jpg: "yuv420p",
+  bmp: "rgb24",
+};
+
+/** How long a still picture turned into a video clip lasts. */
+const STILL_IMAGE_SECONDS = 5;
 
 const AUDIO_CODEC_ARGS: Record<string, string[]> = {
   mp3: ["-c:a", "libmp3lame", "-q:a", "2"],
@@ -34,6 +59,8 @@ const VIDEO_CODEC_ARGS: Record<string, string[]> = {
 type ProbeStream = {
   codec_type?: string;
   codec_name?: string;
+  width?: number;
+  height?: number;
   disposition?: Record<string, number>;
 };
 
@@ -46,15 +73,33 @@ function requireBinaries(): { ffmpeg: string; ffprobe: string } {
   return { ffmpeg: FFMPEG_PATH, ffprobe: FFPROBE_PATH };
 }
 
+/** Codecs that carry a single still picture rather than moving images. */
+const STILL_IMAGE_CODECS = new Set(["mjpeg", "png", "bmp", "gif", "tiff", "webp"]);
+
+/**
+ * Container formats ffprobe reports for a plain image file. They are what
+ * separates a real picture from the still-image stream of embedded cover art.
+ */
+const IMAGE_CONTAINERS = new Set([
+  "png_pipe",
+  "jpeg_pipe",
+  "image2",
+  "webp_pipe",
+  "bmp_pipe",
+  "tiff_pipe",
+]);
+
 /**
  * MP3s and M4As with embedded cover art carry a still-image "video" stream.
  * Treating those as video (as the web version did) makes ffmpeg encode a
- * single JPEG into a video track, so they are filtered out here.
+ * single JPEG into a video track, so they are recognised separately.
  */
-function isRealVideoStream(stream: ProbeStream): boolean {
+function isCoverArt(stream: ProbeStream, fileHasAudio: boolean): boolean {
   if (stream.codec_type !== "video") return false;
-  if (stream.disposition?.attached_pic === 1) return false;
-  return !["mjpeg", "png", "bmp", "gif"].includes(stream.codec_name ?? "");
+  if (stream.disposition?.attached_pic === 1) return true;
+  // Some files omit the disposition; a still picture beside an audio track is
+  // cover art either way.
+  return fileHasAudio && STILL_IMAGE_CODECS.has(stream.codec_name ?? "");
 }
 
 export function probe(inputPath: string): Promise<MediaInfo> {
@@ -88,14 +133,32 @@ export function probe(inputPath: string): Promise<MediaInfo> {
       try {
         const data = JSON.parse(stdout) as {
           streams?: ProbeStream[];
-          format?: { duration?: string };
+          format?: { duration?: string; format_name?: string };
         };
         const streams = data.streams ?? [];
+        const hasAudio = streams.some((s) => s.codec_type === "audio");
+        const videoStreams = streams.filter((s) => s.codec_type === "video");
+
+        const containers = (data.format?.format_name ?? "").split(",");
+        const isImage =
+          videoStreams.length > 0 &&
+          !hasAudio &&
+          containers.some((name) => IMAGE_CONTAINERS.has(name));
+
         const duration = Number(data.format?.duration);
+        const picture = videoStreams[0];
+
         resolve({
-          hasVideo: streams.some(isRealVideoStream),
-          hasAudio: streams.some((s) => s.codec_type === "audio"),
-          durationSeconds: Number.isFinite(duration) && duration > 0 ? duration : null,
+          hasVideo: !isImage && videoStreams.some((s) => !isCoverArt(s, hasAudio)),
+          hasAudio,
+          isImage,
+          hasCoverArt: videoStreams.some((s) => isCoverArt(s, hasAudio)),
+          width: picture?.width ?? null,
+          height: picture?.height ?? null,
+          // A still picture reports a nominal duration (a JPEG claims 0.04 s),
+          // which would make the progress bar meaningless.
+          durationSeconds:
+            !isImage && Number.isFinite(duration) && duration > 0 ? duration : null,
         });
       } catch {
         reject(new UserError("Die ffprobe-Ausgabe konnte nicht gelesen werden."));
@@ -112,6 +175,90 @@ export function buildFfmpegArgs(
 ): string[] {
   const common = ["-hide_banner", "-loglevel", "error", "-progress", "pipe:1", "-nostats"];
   const category = TARGET_CATEGORY[target];
+
+  if (category === "image") {
+    // A video contributes its first frame, an audio file its cover art, and an
+    // image itself — all three reduce to "take one picture from the input".
+    if (!info.isImage && !info.hasVideo && !info.hasCoverArt) {
+      throw new UserError(
+        info.hasAudio
+          ? "Die Datei enthält kein Bild. Nur Audiodateien mit eingebettetem Cover lassen sich in ein Bild umwandeln."
+          : "Die Datei enthält kein Bild.",
+      );
+    }
+
+    if (OPAQUE_TARGETS.has(target) && info.width && info.height) {
+      // JPG and BMP have no alpha channel. Without this the transparent parts
+      // would silently turn black instead of being composited onto white.
+      return [
+        ...common,
+        "-f",
+        "lavfi",
+        "-i",
+        `color=white:s=${info.width}x${info.height}`,
+        "-i",
+        inputPath,
+        "-filter_complex",
+        `[0][1]overlay=format=auto,format=${FLATTEN_PIXEL_FORMAT[target]}`,
+        "-frames:v",
+        "1",
+        ...IMAGE_CODEC_ARGS[target],
+        "-y",
+        outputPath,
+      ];
+    }
+
+    return [
+      ...common,
+      "-i",
+      inputPath,
+      "-map",
+      "0:v:0",
+      "-frames:v",
+      "1",
+      ...IMAGE_CODEC_ARGS[target],
+      "-y",
+      outputPath,
+    ];
+  }
+
+  if (info.isImage && category === "video") {
+    if (target === "gif") {
+      // Keeps the original size: unlike a video, a picture is not shrunk to a
+      // manageable frame size.
+      return [
+        ...common,
+        "-i",
+        inputPath,
+        "-filter_complex",
+        "[0:v]split[a][b];[a]palettegen[p];[b][p]paletteuse",
+        "-frames:v",
+        "1",
+        "-y",
+        outputPath,
+      ];
+    }
+
+    // A still picture held for a few seconds, so the result is playable.
+    return [
+      ...common,
+      "-loop",
+      "1",
+      "-i",
+      inputPath,
+      "-t",
+      String(STILL_IMAGE_SECONDS),
+      "-r",
+      "25",
+      "-vf",
+      // h264 and vp9 need even dimensions.
+      "scale=trunc(iw/2)*2:trunc(ih/2)*2,format=yuv420p",
+      ...VIDEO_CODEC_ARGS[target],
+      "-an",
+      "-y",
+      outputPath,
+    ];
+  }
 
   if (category === "audio") {
     if (!info.hasAudio) {

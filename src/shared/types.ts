@@ -10,6 +10,11 @@ export const CONVERT_TARGETS = [
   "wav",
   "m4a",
   "ogg",
+  "png",
+  "jpg",
+  "webp",
+  "bmp",
+  "tiff",
 ] as const;
 export type ConvertTarget = (typeof CONVERT_TARGETS)[number];
 
@@ -36,5 +41,11 @@ export type YtdlpSource = "managed" | "manual" | "system" | "env" | "none";
 export type MediaInfo = {
   hasVideo: boolean;
   hasAudio: boolean;
+  /** The file is a single still picture rather than a video. */
+  isImage: boolean;
+  /** An audio file carrying embedded cover art, which can be extracted. */
+  hasCoverArt: boolean;
+  width: number | null;
+  height: number | null;
   durationSeconds: number | null;
 };

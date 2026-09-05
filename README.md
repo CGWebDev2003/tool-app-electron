@@ -160,5 +160,26 @@ eigene Kopie unter `userData/bin`, und zuletzt ein `yt-dlp` im System-`PATH`.
 
 **YouTube Download:** Video (MP4), Audio (M4A), Audio (MP3)
 
-**Converter:** MP4, WebM, MOV, GIF, MP3, WAV, M4A, OGG. Eine reine Audiodatei in ein Videoformat zu
-wandeln erzeugt ein schwarzes Bild als Träger; für ein GIF wird eine Videospur benötigt.
+**Converter:**
+
+| Gruppe | Formate |
+| ------ | ------- |
+| Video  | MP4, WebM, MOV, GIF |
+| Audio  | MP3, WAV, M4A, OGG |
+| Bild   | PNG, JPG, WebP, BMP, TIFF |
+
+Zwischen den Gruppen gelten diese Regeln:
+
+- **Video → Bild** nimmt das erste Bild des Videos.
+- **Bild → Video** erzeugt einen fünf Sekunden langen Clip aus dem Standbild.
+- **Audio → Bild** funktioniert nur, wenn die Datei ein eingebettetes Cover hat — das wird dann
+  herausgelöst.
+- **Audio → Video** legt den Ton auf ein schwarzes Bild, damit etwas abspielbar ist.
+- **Bild → Audio** ist nicht möglich und wird mit einem Hinweis abgelehnt.
+
+Beim Umwandeln nach **JPG oder BMP** geht Transparenz verloren, weil diese Formate keinen
+Alphakanal kennen. Transparente Bereiche werden deshalb auf Weiß gerechnet statt einfach verworfen —
+sonst würden sie schwarz.
+
+AVIF ist bewusst nicht dabei: der mitgelieferte ffmpeg kann es zwar schreiben, das ältere ffprobe
+aber nicht wieder einlesen. Ein Format, das die App nur in eine Richtung beherrscht, wäre eine Falle.
