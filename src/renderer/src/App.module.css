@@ -1,0 +1,11 @@
+.shell {
+  display: flex;
+  height: 100%;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  padding: 32px 40px;
+  overflow-y: auto;
+}
