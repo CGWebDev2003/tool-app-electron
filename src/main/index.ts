@@ -5,6 +5,10 @@ import * as jobs from "./jobs";
 
 const isDev = !app.isPackaged;
 
+// Ships alongside out/main/index.js in both dev and packaged builds (see the
+// "resources" entry in electron-builder.yml's files list).
+const ICON_PATH = path.join(__dirname, "../../resources/icon.png");
+
 function createWindow(): BrowserWindow {
   const window = new BrowserWindow({
     width: 1100,
@@ -14,7 +18,8 @@ function createWindow(): BrowserWindow {
     show: false,
     autoHideMenuBar: true,
     backgroundColor: "#0a0a0a",
-    title: "tool-app",
+    title: "CG Tool App",
+    icon: ICON_PATH,
     webPreferences: {
       preload: path.join(__dirname, "../preload/index.js"),
       // The renderer never touches Node directly — everything goes through the
