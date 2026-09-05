@@ -1,0 +1,21 @@
+appId: dev.cgwebdev.toolapp
+productName: tool-app
+directories:
+  output: release
+  buildResources: build
+files:
+  - out/**
+  - package.json
+# The ffmpeg/ffprobe binaries cannot be executed from inside app.asar, so they
+# are unpacked next to it (see unpackedPath() in src/main/binaries.ts).
+asarUnpack:
+  - node_modules/ffmpeg-static/**
+  - node_modules/ffprobe-static/**
+win:
+  target: nsis
+mac:
+  target: dmg
+  category: public.app-category.utilities
+linux:
+  target: AppImage
+  category: Utility

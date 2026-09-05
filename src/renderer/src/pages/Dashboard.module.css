@@ -1,0 +1,71 @@
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  max-width: 720px;
+  margin-bottom: 36px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 260px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--foreground);
+  text-align: left;
+  cursor: pointer;
+}
+
+.card:hover {
+  border-color: var(--accent);
+}
+
+.cardTitle {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.cardText {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.statusList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.statusItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dotOk {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  flex-shrink: 0;
+}
+
+.dotBad {
+  composes: dotOk;
+  background: var(--danger);
+}
