@@ -28,6 +28,26 @@ npm run dev
 Beim ersten Start auf „yt-dlp installieren" klicken (Dashboard oder Seite „YouTube Download"). Der
 Converter ist sofort einsatzbereit.
 
+### Wenn „yt-dlp installieren" fehlschlägt
+
+Die App nennt in dem Fall den konkreten Grund. Der mit Abstand häufigste ist ein **Virenscanner**:
+Windows Defender meldet `yt-dlp.exe` regelmäßig fälschlich als Bedrohung und löscht die Datei direkt
+nach dem Herunterladen wieder. Zwei Wege führen zum Ziel:
+
+1. yt-dlp in den Ausnahmen des Virenscanners eintragen und erneut auf „yt-dlp installieren" klicken.
+2. yt-dlp selbst installieren und über **„Manuell auswählen"** im Programm angeben:
+
+   ```powershell
+   winget install yt-dlp          # Windows
+   brew install yt-dlp            # macOS
+   sudo apt install yt-dlp        # Debian/Ubuntu
+   ```
+
+   Der gewählte Pfad wird gespeichert und ab dann verwendet.
+
+Weitere Gründe, die die App unterscheidet: kein Zugang zu github.com (Firewall/Proxy), ein
+abgebrochener Download und eine Netzwerksperre, die statt der Datei eine HTML-Seite ausliefert.
+
 ## Skripte
 
 | Befehl             | Zweck                                                              |
@@ -127,8 +147,8 @@ Nur nötig, wenn eigene Programmdateien verwendet werden sollen:
 | `FFPROBE_PATH` | Eigenes `ffprobe` statt des mitgelieferten |
 | `YTDLP_PATH`   | Eigenes `yt-dlp`                           |
 
-Ohne `YTDLP_PATH` sucht die App zuerst ihre eigene Kopie unter `userData/bin` und danach ein `yt-dlp`
-im System-`PATH`.
+Ohne `YTDLP_PATH` sucht die App der Reihe nach: die über „Manuell auswählen" gemerkte Datei, die
+eigene Kopie unter `userData/bin`, und zuletzt ein `yt-dlp` im System-`PATH`.
 
 ## Formate
 

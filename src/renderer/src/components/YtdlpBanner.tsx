@@ -29,18 +29,30 @@ export default function YtdlpBanner({ status }: { status: ToolStatusState }) {
           </>
         )}
       </div>
-      <button
-        type="button"
-        className={styles.action}
-        onClick={() => void status.installYtdlp()}
-        disabled={status.installing}
-      >
-        {status.installing
-          ? "Läuft..."
-          : installed
-            ? "yt-dlp aktualisieren"
-            : "yt-dlp installieren"}
-      </button>
+      <div className={styles.actions}>
+        <button
+          type="button"
+          className={styles.action}
+          onClick={() => void status.installYtdlp()}
+          disabled={status.installing}
+        >
+          {status.installing
+            ? "Läuft..."
+            : installed
+              ? "yt-dlp aktualisieren"
+              : "yt-dlp installieren"}
+        </button>
+        {/* Escape hatch when a virus scanner or network filter blocks the
+            automatic install. */}
+        <button
+          type="button"
+          className={styles.actionQuiet}
+          onClick={() => void status.pickYtdlp()}
+          disabled={status.installing}
+        >
+          Manuell auswählen
+        </button>
+      </div>
       {status.installMessage && <div className={styles.message}>{status.installMessage}</div>}
     </div>
   );

@@ -8,6 +8,7 @@ export type ToolStatusState = {
   installMessage: string;
   refresh: () => Promise<void>;
   installYtdlp: () => Promise<{ ok: boolean; error?: string }>;
+  pickYtdlp: () => Promise<{ ok: boolean; error?: string }>;
 };
 
 export function useToolStatus(): ToolStatusState {
@@ -66,5 +67,22 @@ export function useToolStatus(): ToolStatusState {
     }
   }, [refresh]);
 
-  return { status, loading, installing, installMessage, refresh, installYtdlp };
+  const pickYtdlp = useCallback(async () => {
+    setInstalling(true);
+    try {
+      const result = await window.api.system.pickYtdlp();
+      if (result.ok) {
+        setInstallMessage(`yt-dlp ${result.version} wird verwendet.`);
+        await refresh();
+        return { ok: true };
+      }
+      // An empty message means the dialog was dismissed, which is not an error.
+      if (result.error) setInstallMessage(result.error);
+      return { ok: false, error: result.error };
+    } finally {
+      setInstalling(false);
+    }
+  }, [refresh]);
+
+  return { status, loading, installing, installMessage, refresh, installYtdlp, pickYtdlp };
 }

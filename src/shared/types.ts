@@ -31,7 +31,7 @@ export type ToolStatus = {
 };
 
 /** Where the yt-dlp binary came from — decides whether we may auto-update it. */
-export type YtdlpSource = "managed" | "system" | "env" | "none";
+export type YtdlpSource = "managed" | "manual" | "system" | "env" | "none";
 
 export type MediaInfo = {
   hasVideo: boolean;

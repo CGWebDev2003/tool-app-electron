@@ -7,10 +7,17 @@
  */
 import { app } from "electron";
 import { spawn } from "node:child_process";
-import { mkdtemp, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { FFMPEG_PATH, ffmpegAvailable, installYtdlp, resolveYtdlp } from "./binaries";
+import {
+  FFMPEG_PATH,
+  ffmpegAvailable,
+  installYtdlp,
+  managedYtdlpPath,
+  resolveYtdlp,
+  useManualYtdlp,
+} from "./binaries";
 import * as converter from "./converter";
 import * as youtube from "./youtube";
 import { sanitizeFilename } from "./filename";
@@ -213,6 +220,31 @@ async function main(): Promise<void> {
       youtube.describeYtdlpError(new Error("WARNING: irgendwas\nERROR: etwas ganz Neues")) ===
         "etwas ganz Neues",
       youtube.describeYtdlpError(new Error("WARNING: irgendwas\nERROR: etwas ganz Neues")),
+    );
+
+    // --- Umgang mit einer kaputten yt-dlp-Datei -------------------------------
+    // Genau der Fall, der beim automatischen Installieren scheitern kann.
+    const fakeYtdlp = path.join(tmp, process.platform === "win32" ? "fake.exe" : "fake");
+    await writeFile(fakeYtdlp, "<html>Proxy-Fehlerseite</html>");
+    if (process.platform !== "win32") await chmod(fakeYtdlp, 0o755);
+    const manualBroken = await useManualYtdlp(fakeYtdlp);
+    check(
+      "Eine Datei, die kein yt-dlp ist, wird mit Begründung abgelehnt",
+      !manualBroken.ok && manualBroken.error.length > 20,
+      manualBroken.ok ? "" : manualBroken.error,
+    );
+
+    const missingBinary = await useManualYtdlp(path.join(tmp, "gibtesnicht"));
+    check(
+      "Eine fehlende Datei nennt den Grund",
+      !missingBinary.ok && /nicht gefunden/i.test(missingBinary.error),
+      missingBinary.ok ? "" : missingBinary.error,
+    );
+
+    check(
+      "Der verwaltete Pfad liegt im Benutzerverzeichnis",
+      managedYtdlpPath().startsWith(app.getPath("userData")),
+      managedYtdlpPath(),
     );
 
     // --- yt-dlp ---------------------------------------------------------------

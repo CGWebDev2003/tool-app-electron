@@ -1,6 +1,12 @@
 import { BrowserWindow, dialog, ipcMain, shell } from "electron";
 import path from "node:path";
-import { ffmpegAvailable, FFMPEG_PATH, installYtdlp, resolveYtdlp } from "./binaries";
+import {
+  ffmpegAvailable,
+  FFMPEG_PATH,
+  installYtdlp,
+  resolveYtdlp,
+  useManualYtdlp,
+} from "./binaries";
 import * as converter from "./converter";
 import * as youtube from "./youtube";
 import * as jobs from "./jobs";
@@ -64,6 +70,31 @@ export function registerIpcHandlers(): void {
         const message = error instanceof Error ? error.message : String(error);
         return { ok: false, error: `yt-dlp konnte nicht installiert werden: ${message}` };
       }
+    },
+  );
+
+  ipcMain.handle(
+    "system:pickYtdlp",
+    async (event): Promise<{ ok: true; version: string } | { ok: false; error: string }> => {
+      const window = windowFor(event);
+      const options: Electron.OpenDialogOptions = {
+        title: "yt-dlp auswählen",
+        properties: ["openFile"],
+        filters:
+          process.platform === "win32"
+            ? [
+                { name: "Programme", extensions: ["exe"] },
+                { name: "Alle Dateien", extensions: ["*"] },
+              ]
+            : [{ name: "Alle Dateien", extensions: ["*"] }],
+      };
+      const picked = window
+        ? await dialog.showOpenDialog(window, options)
+        : await dialog.showOpenDialog(options);
+      if (picked.canceled || !picked.filePaths[0]) {
+        return { ok: false, error: "" };
+      }
+      return useManualYtdlp(picked.filePaths[0]);
     },
   );
 

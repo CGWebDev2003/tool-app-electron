@@ -14,6 +14,8 @@ const api = {
     status: (): Promise<ToolStatus> => ipcRenderer.invoke("system:status"),
     installYtdlp: (): Promise<{ ok: true; version: string } | { ok: false; error: string }> =>
       ipcRenderer.invoke("system:installYtdlp"),
+    pickYtdlp: (): Promise<{ ok: true; version: string } | { ok: false; error: string }> =>
+      ipcRenderer.invoke("system:pickYtdlp"),
   },
   dialog: {
     pickMediaFile: (): Promise<string | null> => ipcRenderer.invoke("dialog:pickMediaFile"),
