@@ -1,0 +1,230 @@
+.page {
+  display: flex;
+  flex-direction: column;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.dangerButton {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--danger);
+  cursor: pointer;
+}
+
+.zoomGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.iconButton {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.iconButton:hover:not(:disabled) {
+  background: var(--sidebar-hover);
+}
+
+.iconButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.zoomLabel {
+  font-size: 13px;
+  min-width: 42px;
+  text-align: center;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.inspector {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  width: fit-content;
+}
+
+.inspectorField {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.inspectorField input[type="number"] {
+  width: 60px;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.inspectorField input[type="color"] {
+  width: 32px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--background);
+  cursor: pointer;
+}
+
+.successRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.linkButton {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--foreground);
+  cursor: pointer;
+}
+
+.linkButton:hover {
+  background: var(--sidebar-hover);
+}
+
+.pagesScroll {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.pageContainer {
+  position: relative;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  background: #ffffff;
+}
+
+.pageCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.elementBox {
+  position: absolute;
+  cursor: move;
+}
+
+.elementSelected {
+  outline: 1.5px dashed var(--accent);
+}
+
+.textElement {
+  width: 100%;
+  height: 100%;
+  resize: none;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: inherit;
+  line-height: 1.2;
+  padding: 0;
+  overflow: hidden;
+  cursor: text;
+}
+
+.imageElement {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+.dragHandle {
+  position: absolute;
+  top: -22px;
+  left: -1px;
+  width: 22px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 12px;
+  border-radius: 4px 4px 0 0;
+  cursor: grab;
+  user-select: none;
+}
+
+.deleteHandle {
+  position: absolute;
+  top: -22px;
+  right: -1px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--danger);
+  color: #ffffff;
+  font-size: 14px;
+  line-height: 1;
+  border: none;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+}
+
+.resizeHandle {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid #ffffff;
+  cursor: nwse-resize;
+}

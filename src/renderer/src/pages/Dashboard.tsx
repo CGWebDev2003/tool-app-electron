@@ -38,6 +38,12 @@ export default function Dashboard({ status, onNavigate }: Props) {
             Video und Audio zwischen MP4, WebM, MOV, GIF, MP3, WAV, M4A und OGG umwandeln.
           </span>
         </button>
+        <button type="button" className={styles.card} onClick={() => onNavigate("pdf-editor")}>
+          <span className={styles.cardTitle}>PDF Bearbeiten</span>
+          <span className={styles.cardText}>
+            PDF öffnen, Textfelder und Bilder platzieren und unterschreiben.
+          </span>
+        </button>
       </div>
 
       <h2 className={styles.sectionTitle}>Status</h2>
